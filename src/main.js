@@ -17,59 +17,39 @@ function init() {
     view: canvas
   });
 
-  app.ticker.add(delta => update(delta));
+  app.ticker.add(delta => update(delta/1000));
 
   cells = [];
   let cellCount = 4;
   let cellCutOff = 9;
 
-  let ID = 0;
-
   for (let x = -cellCount/2; x < cellCount/2; x++) {
     for (let y = -cellCount/2; y < cellCount/2; y++) {
       if (x*x + y*y > cellCutOff) continue;
 
-      let cell = new PIXI.Graphics();
-      cell._id = ID;
-      cell.beginFill(0xFFFFFF);
-      cell.drawEllipse(0, 0, cellSize, cellSize);
-      cell.endFill();
+      let cell = new Cell(blobX + cellSize * x, blobY + cellSize * y);
 
-      cell.x = blobX + (cellSize) * x;
-      cell.y = blobY + (cellSize) * y;
-
-      app.stage.addChild(cell);
       cells.push(cell);
 
-      ID++;
+      app.stage.addChild(cell.g);
     }
   }
 }
 
 function update(dt) {
-  for (let x of cells) {
-    let vx = x.x - blobX;
-    let vy = x.y - blobY;
-    let len = Math.sqrt(vx*vx + vy*vy); //calculating length
+  for (let c of cells) {
+    let a = c;
 
-    if (isNaN(len)) continue;
+    let centerPull = new Point(c.x - blobX, c.y - blobY).unit();
+    if (centerPull !== null) {
+      a.velocity.x -= centerPull.x*7;
+      a.velocity.y -= centerPull.y*7;
+    }
 
-    vx /= len;
-    vy /= len;
-
-    x.x -= vx * dt / 10;// * (len/10000);
-    x.y -= vy * dt / 10;// * (len/10000);
-
-    x.x += Math.cos(app.ticker.lastTime/1000 * Math.random()) * Math.random();
-    x.y += Math.sin(app.ticker.lastTime/1000 * Math.random()) * Math.random();
-  }
-
-  for (let a of cells) {
     // find cells with which `cell` is overlapping with
     // calculate the vector p1 - p2, normalise it
     // and then move the cell in that direction;
     // calculate unit vector of vx and vy
-
     for (let b of cells) {
       if (b._id == a._id) {
         continue;
@@ -79,23 +59,83 @@ function update(dt) {
       let d = Math.sqrt(Math.pow(a.x-b.x, 2) + Math.pow(a.y-b.y, 2));
 
       // check if intersecting
-      if (d > cellSize*1.3) {
+      if (d > cellSize*1.5) {
         continue;
       }
 
-      let vx = a.x - b.x;
-      let vy = a.y - b.y;
+      let v = new Point(a.x - b.x, a.y - b.y).unit();
 
-      // calculate unit vector of vx and vy
-      let len = Math.sqrt(vx*vx + vy*vy); //calculating length
-      if (isNaN(len)) continue;
+      if (v === null) continue;
 
-      vx /= len;
-      vy /= len;
-
-      a.x += vx * dt;
-      a.y += vy * dt;
+      a.velocity.x += v.x*10;
+      a.velocity.y += v.y*10;
     }
+
+    c.tick(dt);
+  }
+}
+
+class Point {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  unit() {
+    let u = this;
+
+    let len = Math.sqrt(u.x*u.x + u.y*u.y); //calculating length
+
+    if (isNaN(len)) return null;
+
+    u.x /= len;
+    u.y /= len;
+
+    return u;
+  }
+}
+
+let ID = 0;
+
+class Cell {
+  constructor(x, y) {
+    this._id = ID++;
+
+    this.g = new PIXI.Graphics();
+
+    this.g.beginFill(0xFFFFFF);
+    this.g.drawEllipse(0, 0, cellSize, cellSize);
+    this.g.endFill();
+
+    this.x = x;
+    this.y = y;
+
+    this.velocity = new Point(0, 0);
+    this.drag = 0.99; 
+  }
+
+  get x() {
+    return this.g.x;
+  }
+
+  set x(v) {
+    this.g.x = v;
+  }
+
+  get y() {
+    return this.g.y;
+  }
+
+  set y(v) {
+    this.g.y = v;
+  }
+
+  tick(dt) {
+    this.velocity.x *= this.drag;
+    this.velocity.y *= this.drag;
+
+    this.x += this.velocity.x * dt;
+    this.y += this.velocity.y * dt;
   }
 }
 
