@@ -1,5 +1,5 @@
 let cells;
-let cellSize = 20;
+let cellSize = 15;
 let blobX = 200;
 let blobY = 200;
 let app;
@@ -20,7 +20,7 @@ function init() {
   app.ticker.add(delta => update(delta/1000));
 
   cells = [];
-  let cellCount = 3;
+  let cellCount = 6;
 
   for (let x = -cellCount/2; x < cellCount/2; x++) {
     for (let y = -cellCount/2; y < cellCount/2; y++) {
