@@ -20,14 +20,16 @@ function init() {
   app.ticker.add(delta => update(delta/1000));
 
   cells = [];
-  let cellCount = 4;
-  let cellCutOff = 9;
+  let cellCount = 3;
 
   for (let x = -cellCount/2; x < cellCount/2; x++) {
     for (let y = -cellCount/2; y < cellCount/2; y++) {
-      if (x*x + y*y > cellCutOff) continue;
-
       let cell = new Cell(blobX + cellSize * x, blobY + cellSize * y);
+
+      if (x == 0 && y == 0) cell.poison = 0.1;
+
+      cell.x += 100 * Math.random();
+      cell.y += 100 * Math.random();
 
       cells.push(cell);
 
@@ -39,6 +41,8 @@ function init() {
 function update(dt) {
   for (let c of cells) {
     let a = c;
+
+    // a.poison = Math.max(a.poison - 0.6 * dt, 0);
 
     let centerPull = new Point(c.x - blobX, c.y - blobY).unit();
     if (centerPull !== null) {
@@ -59,16 +63,21 @@ function update(dt) {
       let d = Math.sqrt(Math.pow(a.x-b.x, 2) + Math.pow(a.y-b.y, 2));
 
       // check if intersecting
-      if (d > cellSize*1.5) {
+      if (d > cellSize*1.9) {
         continue;
+      }
+
+      if (a.poison > 0) {
+        b.poison += a.poison * dt * 2;
+        b.poison = Math.min(b.poison, 1);
       }
 
       let v = new Point(a.x - b.x, a.y - b.y).unit();
 
       if (v === null) continue;
 
-      a.velocity.x += v.x*10;
-      a.velocity.y += v.y*10;
+      a.velocity.x += v.x*15;
+      a.velocity.y += v.y*15;
     }
 
     c.tick(dt);
@@ -112,6 +121,8 @@ class Cell {
 
     this.velocity = new Point(0, 0);
     this.drag = 0.99; 
+
+    this.poison = 0.0;
   }
 
   get x() {
@@ -131,6 +142,13 @@ class Cell {
   }
 
   tick(dt) {
+    if (this.poison > 0) {
+      // console.log(this.poison);
+      this.g.tint = eval("0x" + tinycolor("white").darken(this.poison * 100).toHex());
+    // this.g.tint = 0x000000;
+    }
+
+
     this.velocity.x *= this.drag;
     this.velocity.y *= this.drag;
 
