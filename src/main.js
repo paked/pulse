@@ -17,6 +17,10 @@ function init() {
     view: canvas
   });
 
+  app.stage.interactive = true;
+  app.stage.hitArea = new PIXI.Rectangle(0, 0, 1000, 1000);
+  app.stage.on('pointerdown', spawnPoison);
+
   app.ticker.add(delta => update(delta/1000));
 
   cells = [];
@@ -26,10 +30,8 @@ function init() {
     for (let y = -cellCount/2; y < cellCount/2; y++) {
       let cell = new Cell(blobX + cellSize * x, blobY + cellSize * y);
 
-      if (x == 0 && y == 0) cell.poison = 0.1;
-
-      cell.x += 100 * Math.random();
-      cell.y += 100 * Math.random();
+      cell.x += 20 * (Math.random()*2 - 1);
+      cell.y += 20 * (Math.random()*2 - 1);
 
       cells.push(cell);
 
@@ -38,9 +40,22 @@ function init() {
   }
 }
 
+function spawnPoison(ev) {
+  console.log(ev);
+
+  let cell = new Cell(ev.data.global.x, ev.data.global.y);
+  cell.poison = 0.9;
+
+  cells.push(cell);
+  app.stage.addChild(cell.g);
+}
+
 function update(dt) {
   for (let c of cells) {
     let a = c;
+    a.poison -= 0.01 * dt;
+
+    a.poison = Math.max(a.poison, 0);
 
     // a.poison = Math.max(a.poison - 0.6 * dt, 0);
 
@@ -63,11 +78,11 @@ function update(dt) {
       let d = Math.sqrt(Math.pow(a.x-b.x, 2) + Math.pow(a.y-b.y, 2));
 
       // check if intersecting
-      if (d > cellSize*1.9) {
+      if (d > cellSize*1.4) {
         continue;
       }
 
-      if (a.poison > 0) {
+      if (a.poison > 0.8) {
         b.poison += a.poison * dt * 2;
         b.poison = Math.min(b.poison, 1);
       }
@@ -76,8 +91,8 @@ function update(dt) {
 
       if (v === null) continue;
 
-      a.velocity.x += v.x*15;
-      a.velocity.y += v.y*15;
+      a.velocity.x += v.x*18;
+      a.velocity.y += v.y*18;
     }
 
     c.tick(dt);
