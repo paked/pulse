@@ -28,7 +28,7 @@ function init() {
 
   app.ticker.add(delta => update(delta/1000));
 
-  blobs = [new Point(100, 200), new Point(300, 200)];
+  blobs = [new CellBlob(200, 200), new CellBlob(100, 100)];
 
   cells = [];
   let cellCount = 6;
@@ -100,6 +100,25 @@ function spawnPoison(ev) {
 }
 
 function update(dt) {
+  blobs.forEach(e => e.tick(dt));
+
+  for (let i = 0; i < blobs.length; i++) {
+    if (i == 0) continue;
+
+    let b = blobs[i];
+
+    let push = new Point(b.x - 200, b.y - 200).unit();
+    if (push !== null) { // this condition should never really be false
+      b.velocity.x += push.x * 7;
+      b.velocity.y += push.y * 7;
+    }
+  }
+
+  for (let b of blobs) {
+    b.x += Math.sin(app.ticker.lastTime);
+    b.y += Math.cos(app.ticker.lastTime);
+  }
+
   for (let c of cells) {
     let a = c;
     a.poison -= 0.01 * dt;
@@ -184,6 +203,10 @@ class CellBlob {
     this.x += this.velocity.x * dt;
     this.y += this.velocity.y * dt;
   }
+
+  unit() {
+    return new Point(this.x, this.y).unit();
+  }
 }
 
 let Cell_ID = 0;
@@ -201,6 +224,7 @@ class Cell {
     this.y = y;
 
     this.velocity = new Point(0, 0);
+
     this.drag = 0.99; 
 
     this.poison = 0.0;
