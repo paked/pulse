@@ -1,8 +1,11 @@
+let SCREEN_WIDTH = 400;
+let SCREEN_HEIGHT = 400;
+
 let blobs;
 let cells;
 let cellSize = 15;
-let blobX = 200;
-let blobY = 200;
+
+let spawnedPoison = false;
 
 let pointOne;
 let pointTwo;
@@ -13,8 +16,8 @@ function init() {
   let canvas = document.getElementById('game');
 
   app = new PIXI.Application({ 
-    width: 400,         // default: 800
-    height: 400,        // default: 600
+    width: SCREEN_WIDTH,         // default: 800
+    height: SCREEN_HEIGHT,        // default: 600
     antialias: true,    // default: false
     transparent: false, // default: false
     resolution: 1,      // default: 1,
@@ -23,28 +26,22 @@ function init() {
   });
 
   app.stage.interactive = true;
-  app.stage.hitArea = new PIXI.Rectangle(0, 0, 1000, 1000);
+  app.stage.hitArea = new PIXI.Rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
   app.stage.on('pointerdown', splitCells);
 
   app.ticker.add(delta => update(delta/1000));
 
-  blobs = [new CellBlob(200, 200), new CellBlob(100, 100)];
+  blobs = [new CellBlob(SCREEN_WIDTH/2, SCREEN_HEIGHT/2)];
 
   cells = [];
   let cellCount = 6;
 
   for (let x = -cellCount/2; x < cellCount/2; x++) {
     for (let y = -cellCount/2; y < cellCount/2; y++) {
-      let cell = new Cell(blobX + cellSize * x, blobY + cellSize * y);
+      let cell = new Cell(SCREEN_WIDTH/2 + cellSize * x, SCREEN_HEIGHT/2 + cellSize * y);
 
       cell.x += 20 * (Math.random()*2 - 1);
       cell.y += 20 * (Math.random()*2 - 1);
-
-      if (Math.random() > 0.5) {
-        cell.blob = 0;
-      } else {
-        cell.blob = 1;
-      }
 
       cells.push(cell);
 
@@ -61,29 +58,33 @@ function splitCells(ev) {
     pointTwo = new Point(ev.data.global.x, ev.data.global.y);
   }
 
-  let g = new PIXI.Graphics();
-  g.lineStyle(2, 0xFF00FF);
-  g.moveTo(pointOne.x, pointOne.y);
-  g.lineTo(pointTwo.x, pointTwo.y);
+  let x1 = pointOne.x;
+  let y1 = pointOne.y;
+  let x2 = pointTwo.x;
+  let y2 = pointTwo.y;
 
-  app.stage.addChild(g);
+  let f = (x, y) => (x - x1)*(y2 - y1) - (y - y1)*(x2 - x1);
+
+  let mainBlob = cells.filter(c => c.blob == 0);
+  let center = mainBlob.reduce((mid, c) => { mid.x += c.x; mid.y += c.y; return mid})
+  center.x /= mainBlob.length;
+  center.y /= mainBlob.length
+
+  let centerResult = f(center.x, center.y) < 0;
+
+  let mid = new Point((x1 + x2)/2, (y1 + y2)/2);
+  blobs.push(new CellBlob(mid.x, mid.y));
+  let i = blobs.length - 1;
 
   for (let c of cells) {
     let x = c.x;
     let y = c.y;
-    let x1 = pointOne.x;
-    let y1 = pointOne.y;
-    let x2 = pointTwo.x;
-    let y2 = pointTwo.y;
+ 
+    let d = f(x, y) < 0;
 
-    let d = (x - x1)*(y2 - y1) - (y - y1)*(x2 - x1);
-
-    if (d > 0) {
-      c.blob = 0;
-      c.g.tint = 0xff00ff;
-    } else {
-      c.blob = 1;
-      c.g.tint = 0x00ff00;
+    if (d != centerResult) {
+      c.blob = i;
+      c.g.tint = "0xFF00FF";
     }
   }
 
@@ -91,15 +92,18 @@ function splitCells(ev) {
   pointTwo = null;
 }
 
-function spawnPoison(ev) {
-  let cell = new Cell(ev.data.global.x, ev.data.global.y);
-  cell.poison = 0.9;
-
-  cells.push(cell);
-  app.stage.addChild(cell.g);
-}
-
 function update(dt) {
+  if (!spawnedPoison && app.ticker.lastTime > 4) {
+    let cell = new Cell(400, 400);
+    cell.poison = 0.9;
+    cell.blob = 0;
+
+    cells.push(cell);
+    app.stage.addChild(cell.g);
+
+    spawnedPoison = true;
+  }
+
   blobs.forEach(e => e.tick(dt));
 
   for (let i = 0; i < blobs.length; i++) {
@@ -107,11 +111,9 @@ function update(dt) {
 
     let b = blobs[i];
 
-    let push = new Point(b.x - 200, b.y - 200).unit();
-    if (push !== null) { // this condition should never really be false
-      b.velocity.x += push.x * 7;
-      b.velocity.y += push.y * 7;
-    }
+    let push = new Point(b.x - SCREEN_WIDTH/2, b.y - SCREEN_HEIGHT/2).unit();
+    b.velocity.x += push.x * 6;
+    b.velocity.y += push.y * 6;
   }
 
   for (let b of blobs) {
@@ -228,6 +230,7 @@ class Cell {
     this.drag = 0.99; 
 
     this.poison = 0.0;
+    this.blob = 0;
   }
 
   get x() {
