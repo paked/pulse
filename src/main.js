@@ -77,6 +77,8 @@ function splitCells(ev) {
   let i = blobs.length - 1;
 
   for (let c of cells) {
+    if (c.blob != 0) continue;
+
     let x = c.x;
     let y = c.y;
  
@@ -84,7 +86,6 @@ function splitCells(ev) {
 
     if (d != centerResult) {
       c.blob = i;
-      c.g.tint = "0xFF00FF";
     }
   }
 
@@ -93,7 +94,7 @@ function splitCells(ev) {
 }
 
 function update(dt) {
-  if (!spawnedPoison && app.ticker.lastTime > 4) {
+  if (!spawnedPoison && app.ticker.lastTime > 4000) {
     let cell = new Cell(400, 400);
     cell.poison = 0.9;
     cell.blob = 0;
